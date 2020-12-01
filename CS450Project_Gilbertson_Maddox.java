@@ -45,22 +45,46 @@ public void viewTableContent (Connection conn) {
       Scanner scnr = new Scanner (System.in);
        String mySchema = username.toUpperCase();
        String col_type;
+       String tableName = "";
        DatabaseMetaData dmd = conn.getMetaData();
-       ResultSet rs = dmd.getTables(null, mySchema, "%", new String[] {"TABLE"});
+       ResultSet rs;
        System.out.println ("Please choose one of the tables listed below:");
-       while (rs.next()) { 
-            System.out.println ( "         " + rs.getString(3));
-       }
-       String tablename = scnr.nextLine();
+       System.out.println("1=Genre, 2=Movie, 3=Actor, 4=Movie_Cast, 5=Movie_Genre, 6=Movie_History, 7=Member, 8=Profile, 9=Fav_Genres");
+       int userSelection = scnr.nextInt();
+       switch (userSelection) {
+	    case 1: tableName = "Genre";
+		    break;
+	    case 2: tableName = "Movie";
+		    break;
+	    case 3: tableName = "Actor";
+		    break;
+	    case 4: tableName = "Movie_Cast";
+		    break;
+	    case 5: tableName = "Movie_Genre";
+		    break;
+	    case 6: tableName = "Movie_History";
+		    break;
+	    case 7: tableName = "Member";
+		    break;
+	    case 8: tableName = "Profile";
+		    break;
+	    case 9: tableName = "Fav_Genres";
+		    break;
+	    default:
+		    System.out.println("You didn't make a valid entry.");
+	}
        //need to select * from this table
-       System.out.println ("You chose " + tablename);
-       String strSelect = "SELECT * FROM " + tablename;
+       String strSelect = "SELECT * FROM " + tableName;
        System.out.println (strSelect);
        PreparedStatement stmt = conn.prepareStatement (strSelect);
        rs = stmt.executeQuery();
        ResultSetMetaData rsmd = rs.getMetaData();
        int columnCount = rsmd.getColumnCount();
-       //System.out.println("Num columns =" + columnCount);
+       for (int i = 1; i <= columnCount; i++) {
+		System.out.print(rsmd.getColumnLabel(i) + " ");
+		}
+       System.out.print("\n");
+       System.out.println("------------------------------------------");
        while (rs.next()) {
           for (int i = 1; i <= columnCount; i++) {
                System.out.print (rs.getObject(i) + " ");		
@@ -128,4 +152,3 @@ public static void main (String arg[]){
     }
   }
 }
-
