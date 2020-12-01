@@ -44,6 +44,7 @@ public void viewTableContent (Connection conn) {
     try {
       Scanner scnr = new Scanner (System.in);
        String mySchema = username.toUpperCase();
+       String col_type;
        DatabaseMetaData dmd = conn.getMetaData();
        ResultSet rs = dmd.getTables(null, mySchema, "%", new String[] {"TABLE"});
        System.out.println ("Please choose one of the tables listed below:");
@@ -54,16 +55,23 @@ public void viewTableContent (Connection conn) {
        //need to select * from this table
        System.out.println ("You chose " + tablename);
        String strSelect = "SELECT * FROM " + tablename;
+       System.out.println (strSelect);
        PreparedStatement stmt = conn.prepareStatement (strSelect);
        rs = stmt.executeQuery();
+       ResultSetMetaData rsmd = rs.getMetaData();
+       int columnCount = rsmd.getColumnCount();
+       //System.out.println("Num columns =" + columnCount);
        while (rs.next()) {
-          System.out.println (rs.getString(2));
-       }
+          for (int i = 1; i <= columnCount; i++) {
+               System.out.print (rs.getObject(i) + " ");		
+             }
+             System.out.print("\n");
+	}
        System.out.println ("");
        }
     catch (SQLException sqle) {
        System.out.println (sqle); 
-}      
+	}	      
 }
 
 public void mainMenu() {
@@ -120,3 +128,4 @@ public static void main (String arg[]){
     }
   }
 }
+
