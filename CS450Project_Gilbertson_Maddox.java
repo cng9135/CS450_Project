@@ -40,9 +40,50 @@ public class CS450Project_Gilbertson_Maddox
     return connection;
   }
 
-public void viewTableContent (Connection conn) {
+public void viewRentalHistory(Connection conn) {
+    Scanner scnr = new Scanner(System.in);
+     
     try {
-      Scanner scnr = new Scanner (System.in);
+      String strSelect = "SELECT Profile_name FROM Profile ORDER BY 1";	
+      PreparedStatement stmt = conn.prepareStatement(strSelect, ResultSet.TYPE_SCROLL_INSENSITIVE,
+          ResultSet.CONCUR_READ_ONLY);
+      ResultSet rs = stmt.executeQuery();
+      rs = stmt.executeQuery();
+      int ctr = 1;
+      System.out.println("Select a profile from the list:");
+      while (rs.next()) {
+	System.out.println(ctr + "-" + rs.getString(1));
+	ctr++;
+    } 
+    int userSelection = scnr.nextInt();
+    rs.absolute(userSelection);
+    String profileName = rs.getString(1);
+    System.out.println("Rental History for profile: " + profileName);
+    System.out.println("");
+    strSelect = "SELECT m.title, mh.rating FROM Movie m JOIN Movie_History mh ON m.Movie_ID = mh.Movie_ID WHERE mh.profile_name = ?";
+    stmt = conn.prepareStatement (strSelect);
+    stmt.setString(1, profileName);
+    rs = stmt.executeQuery();
+    System.out.println("Movie Rating");
+    System.out.println("------------");
+    while (rs.next()) {
+       System.out.println(rs.getObject(1) + " " + rs.getObject(2));
+      }
+     System.out.println("");
+     System.out.println("type any character to continue...");
+     Scanner scnr2 = new Scanner(System.in);
+     String s = scnr2.nextLine(); 
+
+  }
+      catch (SQLException sqle) {
+	System.out.println(sqle);
+	}	
+   
+}
+
+public void viewTableContent(Connection conn) {
+    try {
+       Scanner scnr = new Scanner(System.in);
        String mySchema = username.toUpperCase();
        String col_type;
        String tableName = "";
@@ -91,6 +132,10 @@ public void viewTableContent (Connection conn) {
              }
              System.out.print("\n");
 	}
+       System.out.println("");
+       System.out.println("type any character to continue...");
+       Scanner scnr2 = new Scanner(System.in);
+       String s = scnr2.nextLine(); 
        System.out.println ("");
        }
     catch (SQLException sqle) {
@@ -118,8 +163,11 @@ public void mainMenu() {
           System.out.println("5 = Exit");
           optionSelected = myScanner.nextLine();
           if (optionSelected.equals("1")) { 
-             viewTableContent (connection);  
+             viewTableContent(connection);  
 	  }
+	  else if (optionSelected.equals("4")) {
+		viewRentalHistory(connection);
+	}
 	  else if (optionSelected.equals("5")) {
                 System.out.println ("Bye, and see you at the movies.");
 		done = true;
