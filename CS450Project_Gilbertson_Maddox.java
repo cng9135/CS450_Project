@@ -146,6 +146,130 @@ public class CS450Project_Gilbertson_Maddox
     }	      
   }
 
+  // This method will determine if a user is attempting to update, delete, or add a new record, then call the appropriate void method to accomplish the goal.
+  public void additionSubMenu(Connection conn){
+    // Determine if we're adding, updating, or deleting, then call the appropriate sub-method.
+    Scanner scanner = new Scanner(System.in);
+    try{
+      int userSelection = 1;
+      System.out.println("Would you like to add a record, update a record, or delete a record?\nUse 1 for add, 2 for update, and 3 for delete.");
+      do{
+        userSelection = scanner.nextInt();
+        if(userSelection < 1 || userSelection > 3){
+          System.out.println("Please make a valid selection.\nUse 1 for add, 2 for update, and 3 for delete.");
+        }
+      }while(userSelection < 1 || userSelection > 3);
+      switch(userSelection){
+        case 1:
+          // Add.
+          addRecord(conn);
+          break;
+        case 2:
+          // Update.
+          updateOrDelete(conn, true);
+          break;
+        case 3:
+          // Delete.
+          updateOrDelete(conn, false);
+          break;
+      }
+    }
+    catch (Exception e){
+      System.out.println("Error when selecting option. Message: " + e.getMessage());
+    }
+    finally{
+      scanner.close();
+    }
+  }
+
+  public void updateOrDelete(Connection conn, boolean isUpdate){
+    // If isUpdate, then update, otherwise delete.
+    Scanner scanner = new Scanner(System.in);
+    try{
+      int tableSelection;
+      String tableName = "";
+
+      // First, get the table name.
+      do{
+        System.out.println("First, please indicate (using the given index) which table you wish to " + (isUpdate ? "update" : "delete") + " a record from.\nValid table names are:");
+        System.out.println("1=Genre, 2=Movie, 3=Actor, 4=Movie_Cast, 5=Movie_Genre, 6=Movie_History, 7=Member, 8=Profile, 9=Fav_Genres");
+        tableSelection = scanner.nextInt();
+        switch (tableSelection) {
+          case 1: tableName = "Genre";
+            break;
+          case 2: tableName = "Movie";
+            break;
+          case 3: tableName = "Actor";
+            break;
+          case 4: tableName = "Movie_Cast";
+            break;
+          case 5: tableName = "Movie_Genre";
+            break;
+          case 6: tableName = "Movie_History";
+            break;
+          case 7: tableName = "Member";
+            break;
+          case 8: tableName = "Profile";
+            break;
+          case 9: tableName = "Fav_Genres";
+            break;
+          default:
+            System.out.println("You didn't make a valid entry.");
+        }
+      }while(tableSelection < 1 || tableSelection > 9);
+
+      // Now get the appropriate schema so we know what to find.
+      DatabaseMetaData databaseMetaData = conn.getMetaData();
+      ResultSet tableColumns = databaseMetaData.getColumns(null, null, tableName, "%"); // Gets the names of all the columns in the appropriate table.
+      // Tell the user what the various columns are, and let them input conditions.
+      HashMap<String, String> updateColumns = new HashMap<String, String>(); // Key by fieldname, value is new expression.
+      tableColumns.beforeFirst();
+      System.out.println("In " + tableName + ", there are the following columns:");
+      while(tableColumns.next()){
+        System.out.print(tableColumns.getString("COLUMN_NAME") + "\t");
+      }
+      System.out.println("\nPlease type a valid SQL condition (sans terminating semicolon) you would like to " + (isUpdate ? "update" : "delete") + "by:");
+      System.out.println("Note, if you are using more than one condition, please include all boolean operators (ANDs, ORs, etc.).");
+      System.out.println("If you are trying to " + (isUpdate ? "update" : "delete") + " everything in this table, please type 'EVERYTHING'.");
+      String condition = scanner.nextLine();
+      // If delete, run statement. Else, it's update. We need the new values for update.
+      if(!isUpdate){
+        conn.createStatement().executeUpdate("DELETE FROM " + tableName + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition)));
+      }
+      else{
+        // We need to get the set statement. 
+        String setStatement = "";
+        System.out.println("For updating, please input a valid SQL expression for each given column name (or press enter for no expression):");
+        tableColumns.beforeFirst();
+        while(tableColumns.next()){
+          System.out.println("Column name = " + tableColumns.getString("COLUMN_NAME"));
+          setStatement = scanner.nextLine();
+          if(!(setStatement.equals(""))){
+            updateColumns.put(tableColumns.getString("COLUMN_NAME"), setStatement);
+          }
+        }
+        if(updateColumns.size() == 0){
+          System.out.println("You attempted to update no columns. This is an invalid update.");
+        }
+        else{
+          // Now we have all the sets. Create and run query.
+          String queryString = "UPDATE " + tableName + " SET ";
+          for(String columnKey : updateColumns.keySet()){
+            queryString = queryString + columnKey + " = " + updateColumns.get(columnKey) + ", "; 
+          }
+          queryString = queryString.substring(0, (queryString.length() - 2)) + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition));
+          conn.createStatement().executeUpdate(queryString);
+        }
+      }
+    }
+    catch(Exception e){
+      System.out.println("Exception occurred when adding record. Message: " + e.getMessage());
+    }
+    finally{
+      scanner.close();
+    }
+  }
+
   // This method will add a record into a table, returning void. 
   // The plan: Get the table from user input, tell the user the appropriate schema, and then get each required field.
   public void addRecord(Connection conn){
@@ -189,31 +313,51 @@ public class CS450Project_Gilbertson_Maddox
       ResultSet tableColumns = databaseMetaData.getColumns(null, null, tableName, "%"); // Gets the names of all the columns in the appropriate table.
       LinkedList<String> columnNames = new LinkedList<String>(); // Ordered queue of column names.
       HashMap<String, String> fieldValues = new HashMap<String, String>(); // Mapping from column names to the value for the new record.
+      boolean isProfile = tableName.equals("Profile") ? true : false;
 
       // Get the values for each field.
+      tableColumns.beforeFirst();
       while(tableColumns.next()){
         // Now get the data for that field.
         String columnName = tableColumns.getString("COLUMN_NAME");
         System.out.println("Field name: " + columnName + " with datatype: " + tableColumns.getString("DATA_TYPE") + ".\nInsert value for field:");
-        String fieldValue = scanner.next();
+        String fieldValue = scanner.nextLine();
         columnNames.add(columnName);
         fieldValues.put(columnName, fieldValue);
+        if(isProfile && columnName.toLowerCase().equals("member_id")){
+          // We need to check and see if this is valid. Count how many entries already have this member_id in Profiles table.
+          ResultSet countOfProfiles = conn.createStatement().executeQuery("SELECT COUNT(*) AS number FROM Profile WHERE Member_ID = \"" + fieldValue + "\"");
+          countOfProfiles.beforeFirst();
+          tableColumns.next();
+          if(countOfProfiles.getInt("number") > 4){
+            // Then this is invalid. Re-set isProfile to true.
+            isProfile = true;
+          }
+          else{
+            isProfile = false;
+          }
+        }
       }
-
-      // Now construct the query string, using our linked list as a queue of the column names and the hash map to fetch the value.
-      String queryString = "INSERT INTO " + tableName + " (";
-      String valuesString = "(";
-      while(!(columnNames.isEmpty())){
-        String currentColumn = columnNames.poll();
-        queryString = queryString + currentColumn + ", ";
-        valuesString = valuesString + fieldValues.get(currentColumn) + ", ";
+      // Check if we can insert this profile or not. If not, then we need to exit immediately.
+      if(isProfile){
+        System.out.println("There are already a maximum number of profiles attached to this account. Please remove/update one before continuing.");
       }
-      valuesString = valuesString.substring(0, (valuesString.length() - 1)) + ")";
-      queryString = queryString.substring(0, (queryString.length() - 1)) + ") VALUES " + valuesString;
+      else{
+        // Now construct the query string, using our linked list as a queue of the column names and the hash map to fetch the value.
+        String queryString = "INSERT INTO " + tableName + " (";
+        String valuesString = "(";
+        while(!(columnNames.isEmpty())){
+          String currentColumn = columnNames.poll();
+          queryString = queryString + currentColumn + ", ";
+          valuesString = valuesString + fieldValues.get(currentColumn) + ", ";
+        }
+        valuesString = valuesString.substring(0, (valuesString.length() - 1)) + ")";
+        queryString = queryString.substring(0, (queryString.length() - 1)) + ") VALUES " + valuesString;
 
-      // Finally, execute the insert statement.
-      conn.createStatement().executeUpdate(queryString);
-      System.out.println("Executed insert:\n" + queryString);
+        // Finally, execute the insert statement.
+        conn.createStatement().executeUpdate(queryString);
+        System.out.println("Executed insert:\n" + queryString);
+      }
     }
     catch(Exception e){
       System.out.println("Exception occurred when adding record. Message: " + e.getMessage());
@@ -239,7 +383,7 @@ public class CS450Project_Gilbertson_Maddox
         String titleFragment = "";
         do{
           System.out.println("Please provide the title (or part of title) of the movie you are searching for.");
-          titleFragment = scanner.next();
+          titleFragment = scanner.nextLine();
         }while(titleFragment.equals(""));
         // Now search.
         ResultSet matchingMovies = conn.createStatement().executeQuery("SELECT title, year, average_rating FROM Movies WHERE title LIKE \"" + titleFragment + "\"");
@@ -311,6 +455,12 @@ public class CS450Project_Gilbertson_Maddox
             optionSelected = myScanner.nextLine();
             if (optionSelected.equals("1")) { 
               viewTableContent(connection);  
+      }
+      else if(optionSelected.equals("2")){
+        additionSubMenu(connection);
+      }
+      else if(optionSelected.equals("3")){
+        searchDatabase(connection);
       }
       else if (optionSelected.equals("4")) {
       viewRentalHistory(connection);
