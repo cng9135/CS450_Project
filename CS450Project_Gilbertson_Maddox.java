@@ -58,6 +58,7 @@ public class CS450Project_Gilbertson_Maddox
         ctr++;
       } 
       int userSelection = scnr.nextInt();
+      scnr.nextLine();
       rs.absolute(userSelection);
       String profileName = rs.getString(1);
       System.out.println("Rental History for profile: " + profileName);
@@ -74,13 +75,10 @@ public class CS450Project_Gilbertson_Maddox
       System.out.println("");
       System.out.println("type any character to continue...");
       Scanner scnr2 = new Scanner(System.in);
-      String s = scnr2.nextLine(); 
+      String s = scnr2.nextLine();
     }
     catch (SQLException sqle) {
       System.out.println(sqle);
-    }
-    finally{
-      scnr.close();
     }
   }
 
