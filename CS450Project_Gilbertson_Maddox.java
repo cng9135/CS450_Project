@@ -327,7 +327,7 @@ public class CS450Project_Gilbertson_Maddox
         fieldValues.put(columnName, fieldValue);
         if(isProfile && columnName.toLowerCase().equals("member_id")){
           // We need to check and see if this is valid. Count how many entries already have this member_id in Profiles table.
-          ResultSet countOfProfiles = conn.prepareStatement("SELECT COUNT(*) AS number FROM Profile WHERE Member_ID = \"" + fieldValue + "\"", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
+          ResultSet countOfProfiles = conn.prepareStatement("SELECT COUNT(*) AS number FROM Profile WHERE Member_ID = '" + fieldValue + "'", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
           countOfProfiles.beforeFirst();
           tableColumns.next();
           if(countOfProfiles.getInt("number") > 4){
@@ -387,7 +387,7 @@ public class CS450Project_Gilbertson_Maddox
           titleFragment = scanner.nextLine();
         }
         // Now search.
-        String queryString = "Executing search: SELECT title, year, average_rating FROM Movies WHERE title LIKE \"" + titleFragment + "\"";
+        String queryString = "Executing search: SELECT title, year, average_rating FROM Movie WHERE title LIKE '%" + titleFragment + "%'";
         System.out.println(queryString);
         ResultSet matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
         // Now display.
@@ -411,13 +411,13 @@ public class CS450Project_Gilbertson_Maddox
         }
         else{
           if(weHaveFirst){
-            queryString = queryString + "first_name LIKE " + firstActorFragment;
+            queryString = queryString + "first_name LIKE '" + firstActorFragment + "'";
             if(weHaveLast){
               queryString = queryString + " AND ";
             }
           }
           if(weHaveLast){
-            queryString = queryString + "last_name LIKE " + lastActorFragment;
+            queryString = queryString + "last_name LIKE '" + lastActorFragment + "'";
           }
           queryString = queryString + "))";
           // Finally, query and print results.
@@ -441,43 +441,43 @@ public class CS450Project_Gilbertson_Maddox
   public void mainMenu() {
 
     try { 
-        String tableName;
-        boolean done = false;
-        Scanner myScanner = new Scanner(System.in);
-        System.out.println ("Enter username");
-        username = myScanner.nextLine();
-        System.out.println ("Enter Password");
-        password = myScanner.nextLine();
-        Connection connection = getConnection();
-        while (!done) {
-            System.out.println("Main Menu");
-            System.out.println("1 = View Table Content");
-            System.out.println("2 = Add/Update/Delete Records");
-            System.out.println("3 = Search");
-            System.out.println("4 = Show Rental History");
-            System.out.println("5 = Exit");
-            optionSelected = myScanner.nextLine();
-            if (optionSelected.equals("1")) { 
-              viewTableContent(connection);  
-      }
-      else if(optionSelected.equals("2")){
-        additionSubMenu(connection);
-      }
-      else if(optionSelected.equals("3")){
-        searchDatabase(connection);
-      }
-      else if (optionSelected.equals("4")) {
-      viewRentalHistory(connection);
-    }
-      else if (optionSelected.equals("5")) {
-                  System.out.println ("Bye, and see you at the movies.");
-      done = true;
-      }
-          else {
-              System.out.println ("Please enter 1, 2, 3, 4 or 5");
-            }
-    }  
-        close(connection);
+      String tableName;
+      boolean done = false;
+      Scanner myScanner = new Scanner(System.in);
+      System.out.println ("Enter username");
+      username = myScanner.nextLine();
+      System.out.println ("Enter Password");
+      password = myScanner.nextLine();
+      Connection connection = getConnection();
+      while (!done) {
+        System.out.println("Main Menu");
+        System.out.println("1 = View Table Content");
+        System.out.println("2 = Add/Update/Delete Records");
+        System.out.println("3 = Search");
+        System.out.println("4 = Show Rental History");
+        System.out.println("5 = Exit");
+        optionSelected = myScanner.nextLine();
+        if (optionSelected.equals("1")) { 
+          viewTableContent(connection);  
+        }
+        else if(optionSelected.equals("2")){
+          additionSubMenu(connection);
+        }
+        else if(optionSelected.equals("3")){
+          searchDatabase(connection);
+        }
+        else if (optionSelected.equals("4")) {
+          viewRentalHistory(connection);
+        }
+        else if (optionSelected.equals("5")) {
+          System.out.println ("Bye, and see you at the movies.");
+          done = true;
+        }
+        else {
+          System.out.println ("Please enter 1, 2, 3, 4 or 5");
+        }
+      }  
+      close(connection);
     }
     catch (SQLException sqle) {
     
