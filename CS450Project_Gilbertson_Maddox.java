@@ -7,6 +7,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Scanner;
+
+import javax.naming.spi.DirStateFactory.Result;
+
 import java.util.HashMap;
 import java.util.LinkedList;
 
@@ -219,9 +222,9 @@ public class CS450Project_Gilbertson_Maddox
       // Now get the appropriate schema so we know what to find.
       DatabaseMetaData databaseMetaData = conn.getMetaData();
       ResultSet tableColumns = databaseMetaData.getColumns(null, null, tableName, "%"); // Gets the names of all the columns in the appropriate table.
+      ResultSet tableColumns2 = databaseMetaData.getColumns(null, null, tableName, "%");
       // Tell the user what the various columns are, and let them input conditions.
       HashMap<String, String> updateColumns = new HashMap<String, String>(); // Key by fieldname, value is new expression.
-      tableColumns.beforeFirst();
       System.out.println("In " + tableName + ", there are the following columns:");
       while(tableColumns.next()){
         System.out.print(tableColumns.getString("COLUMN_NAME") + "\t");
@@ -233,18 +236,17 @@ public class CS450Project_Gilbertson_Maddox
       // If delete, run statement. Else, it's update. We need the new values for update.
       if(!isUpdate){
         System.out.println("DELETE FROM " + tableName + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition)));
-        conn.createStatement().executeUpdate("DELETE FROM " + tableName + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition)));
+        conn.prepareStatement("DELETE FROM " + tableName + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition))).executeUpdate();
       }
       else{
         // We need to get the set statement. 
         String setStatement = "";
         System.out.println("For updating, please input a valid SQL expression for each given column name (or press enter for no expression):");
-        tableColumns.beforeFirst();
-        while(tableColumns.next()){
-          System.out.println("Column name = " + tableColumns.getString("COLUMN_NAME"));
+        while(tableColumns2.next()){
+          System.out.println("Column name = " + tableColumns2.getString("COLUMN_NAME"));
           setStatement = scanner.nextLine();
           if(!(setStatement.equals(""))){
-            updateColumns.put(tableColumns.getString("COLUMN_NAME"), setStatement);
+            updateColumns.put(tableColumns2.getString("COLUMN_NAME"), setStatement);
           }
         }
         if(updateColumns.size() == 0){
@@ -258,7 +260,7 @@ public class CS450Project_Gilbertson_Maddox
           }
           queryString = queryString.substring(0, (queryString.length() - 2)) + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition));
           System.out.println(queryString);
-          conn.createStatement().executeUpdate(queryString);
+          conn.prepareStatement(queryString).executeUpdate();
         }
       }
     }
@@ -316,7 +318,6 @@ public class CS450Project_Gilbertson_Maddox
       boolean isProfile = tableName.equals("Profile") ? true : false;
 
       // Get the values for each field.
-      tableColumns.beforeFirst();
       while(tableColumns.next()){
         // Now get the data for that field.
         String columnName = tableColumns.getString("COLUMN_NAME");
@@ -326,7 +327,7 @@ public class CS450Project_Gilbertson_Maddox
         fieldValues.put(columnName, fieldValue);
         if(isProfile && columnName.toLowerCase().equals("member_id")){
           // We need to check and see if this is valid. Count how many entries already have this member_id in Profiles table.
-          ResultSet countOfProfiles = conn.createStatement().executeQuery("SELECT COUNT(*) AS number FROM Profile WHERE Member_ID = \"" + fieldValue + "\"");
+          ResultSet countOfProfiles = conn.prepareStatement("SELECT COUNT(*) AS number FROM Profile WHERE Member_ID = \"" + fieldValue + "\"", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
           countOfProfiles.beforeFirst();
           tableColumns.next();
           if(countOfProfiles.getInt("number") > 4){
@@ -356,7 +357,7 @@ public class CS450Project_Gilbertson_Maddox
 
         // Finally, execute the insert statement.
         System.out.println("Executed insert:\n" + queryString);
-        conn.createStatement().executeUpdate(queryString);
+        conn.prepareStatement(queryString).executeUpdate();
       }
     }
     catch(Exception e){
@@ -386,7 +387,9 @@ public class CS450Project_Gilbertson_Maddox
           titleFragment = scanner.nextLine();
         }
         // Now search.
-        ResultSet matchingMovies = conn.createStatement().executeQuery("SELECT title, year, average_rating FROM Movies WHERE title LIKE \"" + titleFragment + "\"");
+        String queryString = "Executing search: SELECT title, year, average_rating FROM Movies WHERE title LIKE \"" + titleFragment + "\"";
+        System.out.println(queryString);
+        ResultSet matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
         // Now display.
         matchingMovies.beforeFirst();
         while(matchingMovies.next()){
@@ -418,7 +421,8 @@ public class CS450Project_Gilbertson_Maddox
           }
           queryString = queryString + "))";
           // Finally, query and print results.
-          ResultSet matchingMovies = conn.createStatement().executeQuery(queryString);
+          System.out.println("Executing search: " + queryString);
+          ResultSet matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
           matchingMovies.beforeFirst();
           while(matchingMovies.next()){
             System.out.println("MOVIE: " + matchingMovies.getString("title") + "\nYEAR: " + matchingMovies.getString("year") + "\nAVERAGE RATING: " + matchingMovies.getString("average_rating") + "\n\n");
