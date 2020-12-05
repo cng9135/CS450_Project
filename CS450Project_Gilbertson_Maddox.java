@@ -373,64 +373,81 @@ public class CS450Project_Gilbertson_Maddox
   // This method gets user input and searches for specific movies.
   public void searchDatabase(Connection conn, Scanner scanner){
     // We need to find out what part of the database we're searching.
+    String response = "";
+    String queryString = "";
+    String titleFragment = "";
+    String firstActorFragment = "";
+    String lastActorFragment = "";
+    boolean weHaveFirst, weHaveLast;
+    boolean datafound;
+    boolean finishedSearching = false;
+    ResultSet matchingMovies;
     try{
-      // First, get the field we're searching by.
-      String response = "";
-      do{
-        System.out.println("Please indicate if you would like to search for movies by title or by actors.\nUse 'title' for title and 'actors' for actors.");
-        response = scanner.next();
-      }while(!(response.equals("title")) && !(response.equals("actors)")));
-      if(response.equals("title")){
+      while (!finishedSearching) {
+         datafound = false; //initialize
+         // First, get the field we're searching by.
+          System.out.println("Please indicate if you would like to search for movies by title or by actors.");
+         System.out.println(" Use 'title' for title and 'actors' for actors, or 'done' for finished searching");
+       response = scanner.nextLine();
+      if (response.equals("done")) {
+         finishedSearching = true;
+         }
+      else if(response.equals("title")){
         // We're searching by title. Get the title substring and search for it.
-        String titleFragment = "";
-        while(titleFragment.equals("")){
-          System.out.println("Please provide the title (or part of title) of the movie you are searching for.");
-          titleFragment = scanner.nextLine();
-        }
+        System.out.println ("enter the title to search by.  You may enter only part of the title.");
+        titleFragment = scanner.nextLine();
+        System.out.println ("");
         // Now search.
-        String queryString = "Executing search: SELECT title, year, average_rating FROM Movie WHERE title LIKE '%" + titleFragment + "%'";
-        System.out.println(queryString);
-        ResultSet matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
+        queryString = "SELECT title, year, average_rating FROM Movie WHERE UPPER(title) LIKE '%" + titleFragment.toUpperCase() + "%'";
+        System.out.println("Exwcuting search: " + queryString);
+        matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
         // Now display.
         matchingMovies.beforeFirst();
         while(matchingMovies.next()){
+          datafound = true;
           System.out.println("MOVIE: " + matchingMovies.getString("title") + "\nYEAR: " + matchingMovies.getString("year") + "\nAVERAGE RATING: " + matchingMovies.getString("average_rating") + "\n\n");
         }
+      if (!datafound) {
+        System.out.println ("No data foundi\n");
+      }
       }
       else{
         // We're searching by an actor's name. Get the actor's name and find all associated movies, then select the appropriate movie info from that.
         System.out.println("Please provide the actor's first name, a fragment of their first name, or, if you do not know it, please leave the field blank and press enter.");
-        String firstActorFragment = scanner.nextLine();
+        firstActorFragment = scanner.nextLine().trim();
         System.out.println("Please provide the actor's last name, a fragment of their last name, or, if you do not know it, please leave the field blank and press enter.");
-        String lastActorFragment = scanner.nextLine();
-        String queryString = "SELECT title, year, average_rating FROM Movies WHERE movie_ID IN (SELECT movie_ID FROM Movie_Cast WHERE Actor_ID IN (SELECT Actor_ID FROM Actor WHERE ";
+        lastActorFragment = scanner.nextLine().trim();
+        queryString = "SELECT M.title, M.year, M.average_rating, A.first_name, A.last_name FROM Movie M NATURAL JOIN Movie_Cast MC NATURAL JOIN Actor A WHERE ";
         // Now implement our searches. If we know a fragment, add a LIKE clause.
-        boolean weHaveFirst = firstActorFragment.equals("") ? false : true;
-        boolean weHaveLast = lastActorFragment.equals("") ? false : true;
+        weHaveFirst = firstActorFragment.equals("") ? false : true;
+        weHaveLast = lastActorFragment.equals("") ? false : true;
         if(!weHaveFirst && !weHaveLast){
           System.out.println("I'm sorry, but we cannot search for an actor without either a first name or a last name (or a fragment of either).");
         }
         else{
-          if(weHaveFirst){
-            queryString = queryString + "first_name LIKE '" + firstActorFragment + "'";
-            if(weHaveLast){
-              queryString = queryString + " AND ";
-            }
-          }
-          if(weHaveLast){
-            queryString = queryString + "last_name LIKE '" + lastActorFragment + "'";
-          }
-          queryString = queryString + "))";
+    
+           queryString = queryString + "UPPER(A.first_name) LIKE '%" + firstActorFragment.toUpperCase() + "%' AND UPPER(A.last_name) LIKE '%" + lastActorFragment.toUpperCase() + "%'";
+           
           // Finally, query and print results.
-          System.out.println("Executing search: " + queryString);
-          ResultSet matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
+          System.out.println("Executing search: " + queryString + "\n");
+          matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
           matchingMovies.beforeFirst();
+        
           while(matchingMovies.next()){
-            System.out.println("MOVIE: " + matchingMovies.getString("title") + "\nYEAR: " + matchingMovies.getString("year") + "\nAVERAGE RATING: " + matchingMovies.getString("average_rating") + "\n\n");
+            datafound = true;
+            System.out.println("MOVIE: " + matchingMovies.getString("title") + "\nYEAR: " + matchingMovies.getString("year"));
+            System.out.println ("AVERAGE RATING: " + matchingMovies.getString("average_rating"));
+            System.out.println ("ACTOR: " + matchingMovies.getString("first_name") + " "  + matchingMovies.getString("last_name")+ "\n");
           }
+         if (!datafound) {
+            System.out.println ("No data found\n");
         }
       }
+       }
     }
+    System.out.println ("\nType any character to continue");
+    response = scanner.nextLine();
+    } // end of while loop
     catch(Exception e){
       System.out.println("Exception occurred while searching movies. Message: " + e.getMessage());
     }
