@@ -232,6 +232,7 @@ public class CS450Project_Gilbertson_Maddox
       String condition = scanner.nextLine();
       // If delete, run statement. Else, it's update. We need the new values for update.
       if(!isUpdate){
+        System.out.println("DELETE FROM " + tableName + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition)));
         conn.createStatement().executeUpdate("DELETE FROM " + tableName + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition)));
       }
       else{
@@ -256,6 +257,7 @@ public class CS450Project_Gilbertson_Maddox
             queryString = queryString + columnKey + " = " + updateColumns.get(columnKey) + ", "; 
           }
           queryString = queryString.substring(0, (queryString.length() - 2)) + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition));
+          System.out.println(queryString);
           conn.createStatement().executeUpdate(queryString);
         }
       }
@@ -353,8 +355,8 @@ public class CS450Project_Gilbertson_Maddox
         queryString = queryString.substring(0, (queryString.length() - 1)) + ") VALUES " + valuesString;
 
         // Finally, execute the insert statement.
-        conn.createStatement().executeUpdate(queryString);
         System.out.println("Executed insert:\n" + queryString);
+        conn.createStatement().executeUpdate(queryString);
       }
     }
     catch(Exception e){
@@ -379,10 +381,10 @@ public class CS450Project_Gilbertson_Maddox
       if(response.equals("title")){
         // We're searching by title. Get the title substring and search for it.
         String titleFragment = "";
-        do{
+        while(titleFragment.equals("")){
           System.out.println("Please provide the title (or part of title) of the movie you are searching for.");
           titleFragment = scanner.nextLine();
-        }while(titleFragment.equals(""));
+        }
         // Now search.
         ResultSet matchingMovies = conn.createStatement().executeQuery("SELECT title, year, average_rating FROM Movies WHERE title LIKE \"" + titleFragment + "\"");
         // Now display.
