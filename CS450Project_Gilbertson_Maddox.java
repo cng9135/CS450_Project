@@ -12,6 +12,7 @@ import javax.naming.spi.DirStateFactory.Result;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 
 public class CS450Project_Gilbertson_Maddox 
 { 
@@ -45,9 +46,7 @@ public class CS450Project_Gilbertson_Maddox
     return connection;
   }
 
-  public void viewRentalHistory(Connection conn) {
-    Scanner scnr = new Scanner(System.in);
-      
+  public void viewRentalHistory(Connection conn, Scanner scnr) {
     try {
       String strSelect = "SELECT Profile_name FROM Profile ORDER BY 1";	
       PreparedStatement stmt = conn.prepareStatement(strSelect, ResultSet.TYPE_SCROLL_INSENSITIVE,
@@ -77,17 +76,15 @@ public class CS450Project_Gilbertson_Maddox
       }
       System.out.println("");
       System.out.println("type any character to continue...");
-      Scanner scnr2 = new Scanner(System.in);
-      String s = scnr2.nextLine();
+      String s = scnr.nextLine();
     }
     catch (SQLException sqle) {
       System.out.println(sqle);
     }
   }
 
-  public void viewTableContent(Connection conn) {
+  public void viewTableContent(Connection conn, Scanner scnr) {
       try {
-        Scanner scnr = new Scanner(System.in);
         String mySchema = username.toUpperCase();
         String col_type;
         String tableName = "";
@@ -138,8 +135,7 @@ public class CS450Project_Gilbertson_Maddox
     }
         System.out.println("");
         System.out.println("type any character to continue...");
-        Scanner scnr2 = new Scanner(System.in);
-        String s = scnr2.nextLine(); 
+        String s = scnr.nextLine(); 
         System.out.println ("");
         }
       catch (SQLException sqle) {
@@ -148,9 +144,8 @@ public class CS450Project_Gilbertson_Maddox
   }
 
   // This method will determine if a user is attempting to update, delete, or add a new record, then call the appropriate void method to accomplish the goal.
-  public void additionSubMenu(Connection conn){
+  public void additionSubMenu(Connection conn, Scanner scanner){
     // Determine if we're adding, updating, or deleting, then call the appropriate sub-method.
-    Scanner scanner = new Scanner(System.in);
     try{
       int userSelection = 1;
       System.out.println("Would you like to add a record, update a record, or delete a record?\nUse 1 for add, 2 for update, and 3 for delete.");
@@ -163,29 +158,29 @@ public class CS450Project_Gilbertson_Maddox
       switch(userSelection){
         case 1:
           // Add.
-          addRecord(conn);
+          addRecord(conn, scanner);
           break;
         case 2:
           // Update.
-          updateOrDelete(conn, true);
+          updateOrDelete(conn, true, scanner);
           break;
         case 3:
           // Delete.
-          updateOrDelete(conn, false);
+          updateOrDelete(conn, false, scanner);
           break;
       }
+      System.out.println("");
+      System.out.println("type any character to continue...");
+      String returnFromUpdate = scanner.nextLine();
+      System.out.println("");
     }
     catch (Exception e){
       System.out.println("Error when selecting option. Message: " + e.getMessage());
     }
-    finally{
-      scanner.close();
-    }
   }
 
-  public void updateOrDelete(Connection conn, boolean isUpdate){
+  public void updateOrDelete(Connection conn, boolean isUpdate, Scanner scanner){
     // If isUpdate, then update, otherwise delete.
-    Scanner scanner = new Scanner(System.in);
     try{
       int tableSelection;
       String tableName = "";
@@ -267,15 +262,11 @@ public class CS450Project_Gilbertson_Maddox
     catch(Exception e){
       System.out.println("Exception occurred when adding record. Message: " + e.getMessage());
     }
-    finally{
-      scanner.close();
-    }
   }
 
   // This method will add a record into a table, returning void. 
   // The plan: Get the table from user input, tell the user the appropriate schema, and then get each required field.
-  public void addRecord(Connection conn){
-    Scanner scanner = new Scanner(System.in);
+  public void addRecord(Connection conn, Scanner scanner){
     try{
       int tableSelection;
       String tableName = "";
@@ -311,25 +302,39 @@ public class CS450Project_Gilbertson_Maddox
 
       // Now get the appropriate schema so we know what to fill.
       System.out.println("To add a record into the " + tableName + " table, please input the following fields:");
-      DatabaseMetaData databaseMetaData = conn.getMetaData();
-      ResultSet tableColumns = databaseMetaData.getColumns(null, null, tableName, "%"); // Gets the names of all the columns in the appropriate table.
+      ResultSet namesresult = conn.createStatement().executeQuery("SELECT * FROM " + tableName);
+      ResultSetMetaData getColumnNames = namesresult.getMetaData();
+      int columnCount = getColumnNames.getColumnCount();
       LinkedList<String> columnNames = new LinkedList<String>(); // Ordered queue of column names.
+      LinkedList<String> columnNames2 = new LinkedList<String>();
+      LinkedList<String> columnTypes = new LinkedList<String>();
       HashMap<String, String> fieldValues = new HashMap<String, String>(); // Mapping from column names to the value for the new record.
       boolean isProfile = tableName.equals("Profile") ? true : false;
+      for(int i = 1; i <= columnCount; i++){
+        columnNames.add(getColumnNames.getColumnName(i));
+        columnTypes.add(getColumnNames.getColumnTypeName(i));
+        columnNames2.add(getColumnNames.getColumnName(i));
+      }
 
       // Get the values for each field.
-      while(tableColumns.next()){
+      while(columnNames.size() > 0){
         // Now get the data for that field.
-        String columnName = tableColumns.getString("COLUMN_NAME");
-        System.out.println("Field name: " + columnName + " with datatype: " + tableColumns.getString("DATA_TYPE") + ".\nInsert value for field:");
+        String columnName = columnNames.poll();
+        String columnType = columnTypes.poll();
+        System.out.println("Field name: " + columnName + " with datatype: " + columnType + ".\nInsert value for field:");
         String fieldValue = scanner.nextLine();
-        columnNames.add(columnName);
+        if(fieldValue.equals("")){
+          fieldValue = scanner.nextLine();
+        }
+        else if(columnType.length() >= 7){ 
+          if(columnType.substring(0, 7).toUpperCase().equals("VARCHAR")){
+            fieldValue = "'" + fieldValue + "'";
+          }
+        }
         fieldValues.put(columnName, fieldValue);
         if(isProfile && columnName.toLowerCase().equals("member_id")){
           // We need to check and see if this is valid. Count how many entries already have this member_id in Profiles table.
           ResultSet countOfProfiles = conn.prepareStatement("SELECT COUNT(*) AS number FROM Profile WHERE Member_ID = '" + fieldValue + "'", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
-          countOfProfiles.beforeFirst();
-          tableColumns.next();
           if(countOfProfiles.getInt("number") > 4){
             // Then this is invalid. Re-set isProfile to true.
             isProfile = true;
@@ -347,13 +352,13 @@ public class CS450Project_Gilbertson_Maddox
         // Now construct the query string, using our linked list as a queue of the column names and the hash map to fetch the value.
         String queryString = "INSERT INTO " + tableName + " (";
         String valuesString = "(";
-        while(!(columnNames.isEmpty())){
-          String currentColumn = columnNames.poll();
+        while(!(columnNames2.size() == 0)){
+          String currentColumn = columnNames2.poll();
           queryString = queryString + currentColumn + ", ";
           valuesString = valuesString + fieldValues.get(currentColumn) + ", ";
         }
-        valuesString = valuesString.substring(0, (valuesString.length() - 1)) + ")";
-        queryString = queryString.substring(0, (queryString.length() - 1)) + ") VALUES " + valuesString;
+        valuesString = valuesString.substring(0, (valuesString.length() - 2)) + ")";
+        queryString = queryString.substring(0, (queryString.length() - 2)) + ") VALUES " + valuesString;
 
         // Finally, execute the insert statement.
         System.out.println("Executed insert:\n" + queryString);
@@ -363,15 +368,11 @@ public class CS450Project_Gilbertson_Maddox
     catch(Exception e){
       System.out.println("Exception occurred when adding record. Message: " + e.getMessage());
     }
-    finally{
-      scanner.close();
-    }
   }
 
   // This method gets user input and searches for specific movies.
-  public void searchDatabase(Connection conn){
+  public void searchDatabase(Connection conn, Scanner scanner){
     // We need to find out what part of the database we're searching.
-    Scanner scanner = new Scanner(System.in);
     try{
       // First, get the field we're searching by.
       String response = "";
@@ -433,17 +434,14 @@ public class CS450Project_Gilbertson_Maddox
     catch(Exception e){
       System.out.println("Exception occurred while searching movies. Message: " + e.getMessage());
     }
-    finally{
-      scanner.close();
-    }
   }
 
   public void mainMenu() {
 
+    Scanner myScanner = new Scanner(System.in);
     try { 
       String tableName;
       boolean done = false;
-      Scanner myScanner = new Scanner(System.in);
       System.out.println ("Enter username");
       username = myScanner.nextLine();
       System.out.println ("Enter Password");
@@ -456,18 +454,23 @@ public class CS450Project_Gilbertson_Maddox
         System.out.println("3 = Search");
         System.out.println("4 = Show Rental History");
         System.out.println("5 = Exit");
-        optionSelected = myScanner.nextLine();
+        try{
+          optionSelected = myScanner.nextLine();
+        }
+        catch(NoSuchElementException nsee){
+          optionSelected = "0";
+        }
         if (optionSelected.equals("1")) { 
-          viewTableContent(connection);  
+          viewTableContent(connection, myScanner);  
         }
         else if(optionSelected.equals("2")){
-          additionSubMenu(connection);
+          additionSubMenu(connection, myScanner);
         }
         else if(optionSelected.equals("3")){
-          searchDatabase(connection);
+          searchDatabase(connection, myScanner);
         }
         else if (optionSelected.equals("4")) {
-          viewRentalHistory(connection);
+          viewRentalHistory(connection, myScanner);
         }
         else if (optionSelected.equals("5")) {
           System.out.println ("Bye, and see you at the movies.");
@@ -483,6 +486,9 @@ public class CS450Project_Gilbertson_Maddox
     
     System.out.println ("SQL Exception :" + sqle);
     } 
+    finally{
+      myScanner.close();
+    }
   }
 
   public static void main (String arg[]){
