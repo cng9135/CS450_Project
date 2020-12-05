@@ -451,6 +451,9 @@ public class CS450Project_Gilbertson_Maddox
     catch(Exception e){
       System.out.println("Exception occurred while searching movies. Message: " + e.getMessage());
     }
+    finally{
+      //scanner.close();
+    }
   }
 
   public void mainMenu() {
