@@ -77,6 +77,7 @@ public class CS450Project_Gilbertson_Maddox
       System.out.println("");
       System.out.println("type any character to continue...");
       String s = scnr.nextLine();
+      System.out.println("");
     }
     catch (SQLException sqle) {
       System.out.println(sqle);
@@ -215,19 +216,30 @@ public class CS450Project_Gilbertson_Maddox
       }while(tableSelection < 1 || tableSelection > 9);
 
       // Now get the appropriate schema so we know what to find.
-      DatabaseMetaData databaseMetaData = conn.getMetaData();
-      ResultSet tableColumns = databaseMetaData.getColumns(null, null, tableName, "%"); // Gets the names of all the columns in the appropriate table.
-      ResultSet tableColumns2 = databaseMetaData.getColumns(null, null, tableName, "%");
+      ResultSet namesresult = conn.createStatement().executeQuery("SELECT * FROM " + tableName);
+      ResultSetMetaData getColumnNames = namesresult.getMetaData();
+      int columnCount = getColumnNames.getColumnCount();
+      LinkedList<String> columnNames = new LinkedList<String>(); // Ordered queue of column names.
+      LinkedList<String> columnNames2 = new LinkedList<String>();
+      LinkedList<String> columnTypes = new LinkedList<String>();
       // Tell the user what the various columns are, and let them input conditions.
       HashMap<String, String> updateColumns = new HashMap<String, String>(); // Key by fieldname, value is new expression.
-      System.out.println("In " + tableName + ", there are the following columns:");
-      while(tableColumns.next()){
-        System.out.print(tableColumns.getString("COLUMN_NAME") + "\t");
+      for(int i = 1; i <= columnCount; i++){
+        columnNames.add(getColumnNames.getColumnName(i));
+        columnNames2.add(getColumnNames.getColumnName(i));
+        columnTypes.add(getColumnNames.getColumnTypeName(i));
       }
-      System.out.println("\nPlease type a valid SQL condition (sans terminating semicolon) you would like to " + (isUpdate ? "update" : "delete") + "by:");
+      System.out.println("In " + tableName + ", there are the following columns:");
+      while(columnNames.size() != 0){
+        System.out.println(columnNames.poll() + " of type " + columnTypes.poll());
+      }
+      System.out.println("\nPlease type a valid SQL condition (sans terminating semicolon) you would like to " + (isUpdate ? "update" : "delete") + " by:");
       System.out.println("Note, if you are using more than one condition, please include all boolean operators (ANDs, ORs, etc.).");
       System.out.println("If you are trying to " + (isUpdate ? "update" : "delete") + " everything in this table, please type 'EVERYTHING'.");
       String condition = scanner.nextLine();
+      while(condition.equals("")){
+        condition = scanner.nextLine();
+      }
       // If delete, run statement. Else, it's update. We need the new values for update.
       if(!isUpdate){
         System.out.println("DELETE FROM " + tableName + (condition.equals("EVERYTHING") ? "" : (" WHERE " + condition)));
@@ -237,11 +249,12 @@ public class CS450Project_Gilbertson_Maddox
         // We need to get the set statement. 
         String setStatement = "";
         System.out.println("For updating, please input a valid SQL expression for each given column name (or press enter for no expression):");
-        while(tableColumns2.next()){
-          System.out.println("Column name = " + tableColumns2.getString("COLUMN_NAME"));
+        while(columnNames2.size() != 0){
+          String columnName = columnNames2.poll();
+          System.out.println("Column name = " + columnName);
           setStatement = scanner.nextLine();
           if(!(setStatement.equals(""))){
-            updateColumns.put(tableColumns2.getString("COLUMN_NAME"), setStatement);
+            updateColumns.put(columnName, setStatement);
           }
         }
         if(updateColumns.size() == 0){
