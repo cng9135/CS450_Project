@@ -222,12 +222,14 @@ public class CS450Project_Gilbertson_Maddox
       LinkedList<String> columnNames = new LinkedList<String>(); // Ordered queue of column names.
       LinkedList<String> columnNames2 = new LinkedList<String>();
       LinkedList<String> columnTypes = new LinkedList<String>();
+      LinkedList<String> columnTypes2 = new LinkedList<String>();
       // Tell the user what the various columns are, and let them input conditions.
       HashMap<String, String> updateColumns = new HashMap<String, String>(); // Key by fieldname, value is new expression.
       for(int i = 1; i <= columnCount; i++){
         columnNames.add(getColumnNames.getColumnName(i));
         columnNames2.add(getColumnNames.getColumnName(i));
         columnTypes.add(getColumnNames.getColumnTypeName(i));
+        columnTypes2.add(getColumnNames.getColumnTypeName(i));
       }
       System.out.println("In " + tableName + ", there are the following columns:");
       while(columnNames.size() != 0){
@@ -251,7 +253,13 @@ public class CS450Project_Gilbertson_Maddox
         System.out.println("For updating, please input a valid SQL expression for each given column name (or press enter for no expression):");
         while(columnNames2.size() != 0){
           String columnName = columnNames2.poll();
+          String dataType = columnTypes2.poll();
           System.out.println("Column name = " + columnName);
+          if(dataType.length() >= 7){
+            if(dataType.substring(0, 7).toUpperCase().equals("VARCHAR")){
+              System.out.println("REMINDER: Surround raw String values with single-quotes.");
+            }
+          }
           setStatement = scanner.nextLine();
           if(!(setStatement.equals(""))){
             updateColumns.put(columnName, setStatement);
@@ -407,12 +415,12 @@ public class CS450Project_Gilbertson_Maddox
          }
       else if(response.equals("title")){
         // We're searching by title. Get the title substring and search for it.
-        System.out.println ("enter the title to search by.  You may enter only part of the title.");
+        System.out.println ("Enter the title to search by.  You may enter only part of the title.");
         titleFragment = scanner.nextLine();
         System.out.println ("");
         // Now search.
         queryString = "SELECT title, year, average_rating FROM Movie WHERE UPPER(title) LIKE '%" + titleFragment.toUpperCase() + "%'";
-        System.out.println("Exwcuting search: " + queryString);
+        System.out.println("Executing search: " + queryString);
         matchingMovies = conn.prepareStatement(queryString, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY).executeQuery();
         // Now display.
         matchingMovies.beforeFirst();
