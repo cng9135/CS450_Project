@@ -117,8 +117,8 @@ public class CS450Project_Gilbertson_Maddox
           System.out.println("You didn't make a valid entry.");
     }
         //need to select * from this table
-        String strSelect = "SELECT * FROM " + tableName;
-        System.out.println (strSelect);
+        String strSelect = "SELECT * FROM " + tableName + " ORDER BY 1";
+        System.out.println (strSelect + "\n");
         PreparedStatement stmt = conn.prepareStatement (strSelect);
         rs = stmt.executeQuery();
         ResultSetMetaData rsmd = rs.getMetaData();
